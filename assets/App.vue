@@ -15,8 +15,10 @@
         <div class="upload-bar-track">
           <div class="upload-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
         </div>
-        <div class="upload-file-size" v-text="uploadFileSizeText"></div>
-        <div class="upload-speed" v-if="uploadSpeed">{{ uploadSpeed }}</div>
+        <div class="upload-bottom-row">
+          <div class="upload-speed" v-if="uploadSpeed">{{ uploadSpeed }}</div>
+          <div class="upload-file-size" v-text="uploadFileSizeText"></div>
+        </div>
       </div>
     </div>
     <UploadPopup v-model="showUploadPopup" @upload="onUploadClicked" @createFolder="createFolder"></UploadPopup>
@@ -831,11 +833,16 @@ export default {
   color: #888;
   font-size: 11px;
   text-align: right;
+  flex-shrink: 0;
 }
 .upload-speed {
   color: #4f8cff;
   font-size: 12px;
   font-weight: 500;
-  text-align: right;
+}
+.upload-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>
