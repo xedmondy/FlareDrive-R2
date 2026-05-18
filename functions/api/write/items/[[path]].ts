@@ -155,6 +155,18 @@ export async function onRequestDelete(context) {
         headers: header,
     });
    }
+  const url = new URL(context.request.url);
+  const uploadId = new URLSearchParams(url.search).get("uploadId");
+
+  if (uploadId) {
+    // Abort multipart upload
+    const [bucket, path] = parseBucketPath(context);
+    if (!bucket) return notFound();
+    const multipartUpload = await bucket.resumeMultipartUpload(path, uploadId);
+    await multipartUpload.abort();
+    return new Response(null, { status: 204 });
+  }
+
   const [bucket, path] = parseBucketPath(context);
   if (!bucket) return notFound();
 

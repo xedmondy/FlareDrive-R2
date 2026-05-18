@@ -81,14 +81,14 @@ export async function multipartUpload(key, file, options) {
       const params = new URLSearchParams({ uploadId });
       await axios.post(`/api/write/items/${key}?${params}`, {
         parts: uploadedParts,
-      });
+      }, { signal: options?.signal });
       return;
     }
   }
 
   if (!uploadId) {
     const res = await axios
-      .post(`/api/write/items/${key}?uploads`, "", { headers })
+      .post(`/api/write/items/${key}?uploads`, "", { headers, signal: options?.signal })
       .then((res) => res.data);
     uploadId = res.uploadId;
   }
@@ -101,6 +101,7 @@ export async function multipartUpload(key, file, options) {
       const searchParams = new URLSearchParams({ partNumber: i, uploadId });
       yield axios
         .put(`/api/write/items/${key}?${searchParams}`, chunk, {
+          signal: options?.signal,
           onUploadProgress(progressEvent) {
             if (typeof options?.onUploadProgress !== "function") return;
             // Account for already-uploaded bytes
@@ -129,5 +130,5 @@ export async function multipartUpload(key, file, options) {
   const completeParams = new URLSearchParams({ uploadId });
   await axios.post(`/api/write/items/${key}?${completeParams}`, {
     parts: uploadedParts,
-  });
+  }, { signal: options?.signal });
 }

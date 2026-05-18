@@ -11,7 +11,10 @@
         <span class="upload-panel-count">{{ uploadCurrent }} / {{ uploadTotal }} files</span>
       </div>
       <div class="upload-panel-body">
-        <div class="upload-file-name" v-text="uploadCurrentFileName"></div>
+        <div class="upload-file-row">
+          <div class="upload-file-name" v-text="uploadCurrentFileName"></div>
+          <button class="upload-cancel-btn" @click="cancelUpload" title="Cancel upload">✕</button>
+        </div>
         <div class="upload-bar-track">
           <div class="upload-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
         </div>
@@ -232,6 +235,7 @@ export default {
     uploadLoadedText: "",
     uploadSpeed: "",
     uploadSpeedSamples: [],
+    uploadAbortController: null,
     pendingResumes: {}, // key -> { uploadId, parts } for resume
     backgroundImageUrl: "/assets/bg-light.webp"
   }),
@@ -393,6 +397,8 @@ export default {
       this.uploadLoadedText = "0 B";
       this.uploadSpeed = "";
       this.uploadSpeedSamples = [];
+      this.uploadAbortController = new AbortController();
+      const cancelSignal = this.uploadAbortController.signal;
       let thumbnailDigest = null;
 
       if (file.type.startsWith("image/") || file.type === "video/mp4") {
@@ -464,6 +470,7 @@ export default {
                 );
               } catch (e) { /* quota exceeded */ }
             },
+            signal: cancelSignal,
           });
           // Clean up resume state on success
           delete this.pendingResumes[resumeKey];
@@ -474,7 +481,7 @@ export default {
             );
           } catch (e) { /* ignore */ }
         } else {
-          await axios.put(uploadUrl, file, { headers, onUploadProgress });
+          await axios.put(uploadUrl, file, { headers, onUploadProgress, signal: cancelSignal });
         }
       } catch (error) {
         fetch("/api/write/")
@@ -661,6 +668,28 @@ export default {
       this.uploadCurrent = 0;
       setTimeout(() => this.processUploadQueue());
     },
+
+    cancelUpload() {
+      const ctrl = this.uploadAbortController;
+      if (!ctrl) return;
+      ctrl.abort();
+      this.uploadAbortController = null;
+      // Clean up queue
+      this.uploadQueue = [];
+      this.uploadProgress = null;
+      this.uploadTotal = 0;
+      this.uploadCurrent = 0;
+      this.uploadCurrentFileName = "";
+      this.uploadFileSizeText = "";
+      this.uploadLoadedText = "";
+      this.uploadSpeed = "";
+      this.uploadSpeedSamples = [];
+      // Clear resume state for all pending uploads
+      this.pendingResumes = {};
+      try {
+        localStorage.removeItem("hema-uploads-pending");
+      } catch (e) { /* ignore */ }
+    },
   },
 
   watch: {
@@ -822,6 +851,38 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   color: #333;
+  flex: 1;
+  min-width: 0;
+}
+.upload-file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.upload-cancel-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #e0e0e0;
+  color: #666;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  padding: 0;
+}
+.upload-file-row:hover .upload-cancel-btn {
+  opacity: 1;
+}
+.upload-cancel-btn:hover {
+  background: #ff4444;
+  color: #fff;
 }
 .upload-bar-track {
   height: 6px;
