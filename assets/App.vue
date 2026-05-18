@@ -5,7 +5,19 @@
       @drop.prevent="onDrop"
       :style="{ backgroundImage: `url('${backgroundImageUrl}')` }"
   >
-    <progress v-if="uploadProgress !== null" :value="uploadProgress" max="100"></progress>
+    <div v-if="uploadProgress !== null" class="upload-panel">
+      <div class="upload-panel-header">
+        <span class="upload-panel-title">Uploading...</span>
+        <span class="upload-panel-count">{{ uploadCurrent }} / {{ uploadTotal }} files</span>
+      </div>
+      <div class="upload-panel-body">
+        <div class="upload-file-name" v-text="uploadCurrentFileName"></div>
+        <div class="upload-bar-track">
+          <div class="upload-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
+        </div>
+        <div class="upload-file-size" v-text="uploadFileSizeText"></div>
+      </div>
+    </div>
     <UploadPopup v-model="showUploadPopup" @upload="onUploadClicked" @createFolder="createFolder"></UploadPopup>
     <button class="upload-button circle" @click="showUploadPopup = true">
       <svg t="1741764069699" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
@@ -210,6 +222,10 @@ export default {
     showUploadPopup: false,
     uploadProgress: null,
     uploadQueue: [],
+    uploadTotal: 0,
+    uploadCurrent: 0,
+    uploadCurrentFileName: "",
+    uploadFileSizeText: "",
     backgroundImageUrl: "/assets/bg-light.webp"
   }),
 
@@ -353,11 +369,18 @@ export default {
       if (!this.uploadQueue.length) {
         this.fetchFiles();
         this.uploadProgress = null;
+        this.uploadTotal = 0;
+        this.uploadCurrent = 0;
+        this.uploadCurrentFileName = "";
+        this.uploadFileSizeText = "";
         return;
       }
 
       /** @type File **/
-      const { basedir, file } = this.uploadQueue.pop(0);
+      const { basedir, file } = this.uploadQueue.shift();
+      this.uploadCurrent++;
+      this.uploadCurrentFileName = file.name;
+      this.uploadFileSizeText = this.formatSize(file.size);
       let thumbnailDigest = null;
 
       if (file.type.startsWith("image/") || file.type === "video/mp4") {
@@ -580,6 +603,8 @@ export default {
         file,
       }));
       this.uploadQueue.push(...uploadTasks);
+      this.uploadTotal = this.uploadQueue.length;
+      this.uploadCurrent = 0;
       setTimeout(() => this.processUploadQueue());
     },
   },
@@ -699,5 +724,60 @@ export default {
   position: absolute;
   top: 100%;
   right: 0;
+}
+
+.upload-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  width: 320px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 12px 16px;
+  font-size: 13px;
+}
+.upload-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.upload-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.upload-panel-count {
+  color: #666;
+  font-size: 12px;
+}
+.upload-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.upload-file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+.upload-bar-track {
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.upload-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f8cff, #6cb4ff);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+.upload-file-size {
+  color: #888;
+  font-size: 11px;
+  text-align: right;
 }
 </style>
