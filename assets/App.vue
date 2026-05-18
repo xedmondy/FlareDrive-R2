@@ -17,7 +17,7 @@
         </div>
         <div class="upload-bottom-row">
           <div class="upload-speed" v-if="uploadSpeed">{{ uploadSpeed }}</div>
-          <div class="upload-file-size" v-text="uploadFileSizeText"></div>
+          <div class="upload-file-size"><span class="upload-loaded" v-text="uploadLoadedText"></span> / <span v-text="uploadFileSizeText"></span></div>
         </div>
       </div>
     </div>
@@ -229,6 +229,7 @@ export default {
     uploadCurrent: 0,
     uploadCurrentFileName: "",
     uploadFileSizeText: "",
+    uploadLoadedText: "",
     uploadSpeed: "",
     uploadSpeedSamples: [],
     pendingResumes: {}, // key -> { uploadId, parts } for resume
@@ -387,6 +388,7 @@ export default {
       this.uploadCurrent++;
       this.uploadCurrentFileName = file.name;
       this.uploadFileSizeText = this.formatSize(file.size);
+      this.uploadLoadedText = "0 B";
       this.uploadSpeed = "";
       this.uploadSpeedSamples = [];
       let thumbnailDigest = null;
@@ -420,6 +422,7 @@ export default {
           var percentCompleted =
             (progressEvent.loaded * 100) / progressEvent.total;
           this.uploadProgress = percentCompleted;
+          this.uploadLoadedText = this.formatSize(progressEvent.loaded);
           // Speed calculation: sample every ~500ms
           const now = Date.now();
           const samples = this.uploadSpeedSamples;
@@ -838,6 +841,10 @@ export default {
 .upload-speed {
   color: #4f8cff;
   font-size: 12px;
+  font-weight: 500;
+}
+.upload-loaded {
+  color: #222;
   font-weight: 500;
 }
 .upload-bottom-row {
