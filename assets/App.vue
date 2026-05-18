@@ -226,6 +226,7 @@ export default {
     uploadCurrent: 0,
     uploadCurrentFileName: "",
     uploadFileSizeText: "",
+    pendingResumes: {}, // key -> { uploadId, parts } for resume
     backgroundImageUrl: "/assets/bg-light.webp"
   }),
 
@@ -415,10 +416,31 @@ export default {
         };
         if (thumbnailDigest) headers["fd-thumbnail"] = thumbnailDigest;
         if (file.size >= SIZE_LIMIT) {
+          // Check for pending resume
+          const resumeKey = `${this.cwd}${file.name}`;
+          const resumeState = this.pendingResumes[resumeKey];
           await multipartUpload(`${basedir}${file.name}`, file, {
             headers,
             onUploadProgress,
+            uploadId: resumeState?.uploadId || null,
+            onPartComplete: (uploadId, parts) => {
+              this.pendingResumes[resumeKey] = { uploadId, parts };
+              try {
+                localStorage.setItem(
+                  "hema-uploads-pending",
+                  JSON.stringify(this.pendingResumes)
+                );
+              } catch (e) { /* quota exceeded */ }
+            },
           });
+          // Clean up resume state on success
+          delete this.pendingResumes[resumeKey];
+          try {
+            localStorage.setItem(
+              "hema-uploads-pending",
+              JSON.stringify(this.pendingResumes)
+            );
+          } catch (e) { /* ignore */ }
         } else {
           await axios.put(uploadUrl, file, { headers, onUploadProgress });
         }
@@ -629,6 +651,12 @@ export default {
   },
 
   created() {
+    // Restore pending multipart uploads for resume
+    try {
+      const saved = localStorage.getItem("hema-uploads-pending");
+      if (saved) this.pendingResumes = JSON.parse(saved);
+    } catch (e) { /* ignore */ }
+
     window.addEventListener("popstate", (ev) => {
       const searchParams = new URL(window.location).searchParams;
       if (searchParams.get("p") !== this.cwd)

@@ -63,21 +63,66 @@ export async function multipartUpload(key, file, options) {
   const headers = options?.headers || {};
   headers["content-type"] = file.type;
 
-  const uploadId = await axios
-    .post(`/api/write/items/${key}?uploads`, "", { headers })
-    .then((res) => res.data.uploadId);
+  // Resume from existing uploadId if provided
+  let uploadId = options?.uploadId || null;
+  let uploadedParts = [];
+  let startPart = 1;
+
+  if (uploadId) {
+    // Query server for already uploaded parts
+    try {
+      const res = await axios.get(`/api/write/items/${key}?uploadId=${uploadId}`);
+      const existing = res.data.parts || [];
+      // Convert server part format to { partNumber, etag }
+      uploadedParts = existing.map((p) => ({
+        partNumber: p.partNumber,
+        etag: p.etag,
+      }));
+      // Find the next missing part
+      const uploadedNumbers = new Set(uploadedParts.map((p) => p.partNumber));
+      for (let i = 1; i <= Math.ceil(file.size / SIZE_LIMIT); i++) {
+        if (!uploadedNumbers.has(i)) {
+          startPart = i;
+          break;
+        }
+      }
+      // If all parts already uploaded, complete immediately
+      if (startPart > Math.ceil(file.size / SIZE_LIMIT)) {
+        const params = new URLSearchParams({ uploadId });
+        await axios.post(`/api/write/items/${key}?${params}`, {
+          parts: uploadedParts,
+        });
+        return;
+      }
+    } catch (e) {
+      // Resume failed — start fresh
+      uploadId = null;
+      uploadedParts = [];
+      startPart = 1;
+    }
+  }
+
+  if (!uploadId) {
+    const res = await axios
+      .post(`/api/write/items/${key}?uploads`, "", { headers })
+      .then((res) => res.data);
+    uploadId = res.uploadId;
+  }
+
   const totalChunks = Math.ceil(file.size / SIZE_LIMIT);
 
   const promiseGenerator = function* () {
-    for (let i = 1; i <= totalChunks; i++) {
+    for (let i = startPart; i <= totalChunks; i++) {
       const chunk = file.slice((i - 1) * SIZE_LIMIT, i * SIZE_LIMIT);
       const searchParams = new URLSearchParams({ partNumber: i, uploadId });
       yield axios
         .put(`/api/write/items/${key}?${searchParams}`, chunk, {
           onUploadProgress(progressEvent) {
             if (typeof options?.onUploadProgress !== "function") return;
+            // Account for already-uploaded bytes
+            const uploadedBytes = (startPart - 1) * SIZE_LIMIT;
             options.onUploadProgress({
-              loaded: (i - 1) * SIZE_LIMIT + progressEvent.loaded,
+              loaded: uploadedBytes + (i - startPart) * SIZE_LIMIT + progressEvent.loaded,
               total: file.size,
             });
           },
@@ -89,10 +134,13 @@ export async function multipartUpload(key, file, options) {
     }
   };
 
-  const uploadedParts = [];
   for (const part of promiseGenerator()) {
     const { partNumber, etag } = await part;
     uploadedParts[partNumber - 1] = { partNumber, etag };
+    // Persist progress for resume
+    if (options?.onPartComplete) {
+      options.onPartComplete(uploadId, uploadedParts.filter(Boolean));
+    }
   }
   const completeParams = new URLSearchParams({ uploadId });
   await axios.post(`/api/write/items/${key}?${completeParams}`, {

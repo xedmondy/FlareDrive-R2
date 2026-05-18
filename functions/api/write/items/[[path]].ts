@@ -62,6 +62,21 @@ export async function onRequestPost(context) {
   return new Response("Method not allowed", { status: 405 });
 }
 
+// GET ?uploadId — list already uploaded parts for resume
+export async function onRequestGet(context) {
+  const url = new URL(context.request.url);
+  const uploadId = new URLSearchParams(url.search).get("uploadId");
+  if (!uploadId) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const [bucket, path] = parseBucketPath(context);
+  if (!bucket) return notFound();
+  const multipartUpload = await bucket.resumeMultipartUpload(path, uploadId);
+  const listedParts = await multipartUpload.listParts();
+  return new Response(JSON.stringify({ parts: listedParts }));
+}
+
 export async function onRequestPutMultipart(context) {
   const [bucket, path] = parseBucketPath(context);
   if (!bucket) return notFound();
