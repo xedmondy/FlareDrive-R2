@@ -17,11 +17,11 @@
     </button>
     <div class="app-bar">
       <a class="app-title-container" style="display: flex; align-items: center;" href="/">
-        <img src="/assets/homescreen.png" alt="FlareDrive" style="height: 24px" />
-        <h1 class="app-title" style="font-size: 20px;margin: 0 25px 0 8px; user-select: none;">FlareDrive</h1>
+        <img src="/assets/homescreen.png" alt="HEMA Drive" style="height: 24px" />
+        <h1 class="app-title" style="font-size: 20px;margin: 0 25px 0 8px; user-select: none;">HEMA Drive</h1>
       </a>
 
-      <input type="search" v-model="search" aria-label="Search" placeholder="🍿 输入以全局搜索文件" />
+      <input type="search" v-model="search" aria-label="Search" placeholder="🍿 Search files..." />
       <div class="menu-button">
         <button class="circle" @click="showMenu = true" style="display: flex; align-items: center;background-color: rgb(245, 245, 245);">
           <p style="
@@ -31,7 +31,7 @@
               font-family: '寒蝉半圆体', -apple-system, BlinkMacSystemFont, 'Segoe UI Adjusted',
     'Segoe UI', 'Liberation Sans', sans-serif;"
               class="menu-button-text">
-            菜单
+            Menu
           </p>
           <svg t="1741761597964" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
             p-id="22027" width="24" height="24">
@@ -41,7 +41,7 @@
           </svg>
         </button>
         <Menu v-model="showMenu"
-          :items="[{ text: '按照名称排序A-Z' }, { text: '按照大小递增排序' }, { text: '按照大小递减排序' }, { text: '粘贴文件到网盘' }]"
+          :items="[{ text: 'Sort A-Z' }, { text: 'Sort by size ↑' }, { text: 'Sort by size ↓' }, { text: 'Paste file here' }]"
           @click="onMenuClick" />
       </div>
     </div>
@@ -55,7 +55,7 @@
                 <path d="M384 480l48 0c11.4 0 21.9-6 27.6-15.9l112-192c5.8-9.9 5.8-22.1 .1-32.1S555.5 224 544 224l-400 0c-11.4 0-21.9 6-27.6 15.9L48 357.1 48 96c0-8.8 7.2-16 16-16l117.5 0c4.2 0 8.3 1.7 11.3 4.7l26.5 26.5c21 21 49.5 32.8 79.2 32.8L416 144c8.8 0 16 7.2 16 16l0 32 48 0 0-32c0-35.3-28.7-64-64-64L298.5 96c-17 0-33.3-6.7-45.3-18.7L226.7 50.7c-12-12-28.3-18.7-45.3-18.7L64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l23.7 0L384 480z"/>
               </svg>
             </div>
-            <div class="file-info-container"><span class="file-name">返回上级目录</span></div>
+            <div class="file-info-container"><span class="file-name">Parent directory</span></div>
 
           </div>
         </li>
@@ -116,10 +116,10 @@
       </ul>
     </div>
     <div v-if="loading" style="margin: 20px 0; text-align: center">
-      <span style="font-size: 20px;">加载中...</span>
+      <span style="font-size: 20px;">Loading...</span>
     </div>
     <div v-else-if="!filteredFiles.length && !filteredFolders.length" style="margin: 20px 0; text-align: center">
-      <span style="font-size: 20px;">没有文件</span>
+      <span style="font-size: 20px;">No files</span>
     </div>
     <Dialog v-model="showContextMenu">
       <div
@@ -130,49 +130,49 @@
       <ul v-if="typeof focusedItem === 'string'" class="contextmenu-list">
         <li>
           <button @click="copyLink(`/?p=${encodeURIComponent(focusedItem)}`)">
-            <span>复制链接</span>
+            <span>Copy link</span>
           </button>
         </li>
         <li>
           <button @click="moveFile(focusedItem + '_$folder$')">
-            <span>移动</span>
+            <span>Move</span>
           </button>
         </li>
         <li>
           <button style="color: red" @click="removeFile(focusedItem + '_$folder$')">
-            <span>删除</span>
+            <span>Delete</span>
           </button>
         </li>
       </ul>
       <ul v-else class="contextmenu-list">
         <li>
           <button @click="renameFile(focusedItem.key)">
-            <span>重命名</span>
+            <span>Rename</span>
           </button>
         </li>
         <li>
           <a :href="`/raw/${focusedItem.key}`" target="_blank" download>
-            <span>下载</span>
+            <span>Download</span>
           </a>
         </li>
         <li>
           <button @click="clipboard = focusedItem.key">
-            <span>复制</span>
+            <span>Copy</span>
           </button>
         </li>
         <li>
           <button @click="moveFile(focusedItem.key)">
-            <span>移动</span>
+            <span>Move</span>
           </button>
         </li>
         <li>
           <button @click="copyLink(`/raw/${focusedItem.key}`)">
-            <span>复制链接</span>
+            <span>Copy link</span>
           </button>
         </li>
         <li>
           <button style="color: red" @click="removeFile(focusedItem.key)">
-            <span>删除</span>
+            <span>Delete</span>
           </button>
         </li>
       </ul>
@@ -248,7 +248,7 @@ export default {
 
     async createFolder() {
       try {
-        const folderName = window.prompt("请输入文件夹名称");
+        const folderName = window.prompt("Enter folder name");
         if (!folderName) return;
         this.showUploadPopup = false;
         const uploadUrl = `/api/write/items/${this.cwd}${folderName}/_$folder$`;
@@ -306,22 +306,22 @@ export default {
 
     onMenuClick(text) {
       switch (text) {
-        case "按照名称排序A-Z":
+        case "Sort A-Z":
           this.order = null;
           break;
-        case "按照大小递增排序":
-          this.order = "大小↑";
+        case "Sort by size ↑":
+          this.order = "sizeAsc";
           break;
-        case "按照大小递减排序":
-          this.order = "大小↓";
+        case "Sort by size ↓":
+          this.order = "sizeDesc";
           break;
-        case "粘贴文件到网盘":
+        case "Paste file here":
           return this.pasteFile();
       }
       this.files.sort((a, b) => {
-        if (this.order === "大小↑") {
+        if (this.order === "sizeAsc") {
           return a.size - b.size;
-        } else if (this.order === "大小↓") {
+        } else if (this.order === "sizeDesc") {
           return b.size - a.size;
         } else {
           return a.key.localeCompare(b.key);
@@ -411,13 +411,13 @@ export default {
     },
 
     async removeFile(key) {
-      if (!window.confirm(`确定要删除 ${key} 吗？`)) return;
+      if (!window.confirm(`Are you sure you want to delete ${key}?`)) return;
       await axios.delete(`/api/write/items/${key}`);
       this.fetchFiles();
     },
 
     async renameFile(key) {
-      const newName = window.prompt("重命名为:");
+      const newName = window.prompt("Rename to:");
       if (!newName) return;
       await this.copyPaste(key, `${this.cwd}${newName}`);
       await axios.delete(`/api/write/items/${key}`);
@@ -444,8 +444,8 @@ export default {
 
       // 构建选择列表
       const folderOptions = allFolders.map(folder => {
-        const displayName = folder === '' ? '根目录' :
-          folder === currentPath ? '当前目录' :
+        const displayName = folder === '' ? 'Root' :
+          folder === currentPath ? 'Current' :
             folder.replace(/.*\/(?!$)|\//g, '') + '/';
         return {
           display: displayName,
@@ -458,14 +458,14 @@ export default {
         `${index + 1}. ${opt.display}`
       ).join('\n');
 
-      const promptText = `请选择目标目录(输入数字):\n${options}\n`;
+      const promptText = `Select target directory (enter number):\n${options}\n`;
       const selection = window.prompt(promptText);
 
       if (!selection) return;
 
       const selectedIndex = parseInt(selection) - 1;
       if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= folderOptions.length) {
-        alert('无效的选择');
+        alert('Invalid selection');
         return;
       }
 
@@ -509,7 +509,7 @@ export default {
               processedItems++;
               this.uploadProgress = (processedItems / totalItems) * 100;
             } catch (error) {
-              console.error(`移动 ${item.key} 失败:`, error);
+              console.error(`Move ${item.key} failed:`, error);
             }
           }
 
@@ -530,8 +530,8 @@ export default {
         // 刷新文件列表
         this.fetchFiles();
       } catch (error) {
-        console.error('移动失败:', error);
-        alert('移动失败,请检查目标路径是否正确');
+        console.error('Move failed:', error);
+        alert('Move failed. Check the target path.');
       }
     },
 
@@ -596,8 +596,8 @@ export default {
           window.history.pushState(null, "", url.toString());
         }
         document.title = this.cwd.replace(/.*\/(?!$)|\//g, "") === "/" 
-            ? "FlareDrive-R2 - 优雅的 Cloudflare R2 网盘文件库"
-            :`${this.cwd.replace(/.*\/(?!$)|\//g, "") || "/" } - 优雅的 Cloudflare R2 网盘文件库`;
+            ? "FlareDrive-R2 - Elegant Cloudflare R2 File Host"
+            :`${this.cwd.replace(/.*\/(?!$)|\//g, "") || "/" } - Elegant Cloudflare R2 File Host`;
       },
       immediate: true,
     },
