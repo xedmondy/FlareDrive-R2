@@ -380,6 +380,8 @@ export default {
         this.uploadCurrent = 0;
         this.uploadCurrentFileName = "";
         this.uploadFileSizeText = "";
+        this.uploadLoadedText = "";
+        this.uploadSpeed = "";
         return;
       }
 
@@ -452,6 +454,7 @@ export default {
             headers,
             onUploadProgress,
             uploadId: resumeState?.uploadId || null,
+            savedParts: resumeState?.parts || null,
             onPartComplete: (uploadId, parts) => {
               this.pendingResumes[resumeKey] = { uploadId, parts };
               try {

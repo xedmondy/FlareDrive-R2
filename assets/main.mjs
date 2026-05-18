@@ -63,42 +63,26 @@ export async function multipartUpload(key, file, options) {
   const headers = options?.headers || {};
   headers["content-type"] = file.type;
 
-  // Resume from existing uploadId if provided
+  // Resume from saved parts (no server query needed)
   let uploadId = options?.uploadId || null;
-  let uploadedParts = [];
+  let uploadedParts = options?.savedParts ? [...options.savedParts] : [];
   let startPart = 1;
 
-  if (uploadId) {
-    // Query server for already uploaded parts
-    try {
-      const res = await axios.get(`/api/write/items/${key}?uploadId=${uploadId}`);
-      const existing = res.data.parts || [];
-      // Convert server part format to { partNumber, etag }
-      uploadedParts = existing.map((p) => ({
-        partNumber: p.partNumber,
-        etag: p.etag,
-      }));
-      // Find the next missing part
-      const uploadedNumbers = new Set(uploadedParts.map((p) => p.partNumber));
-      for (let i = 1; i <= Math.ceil(file.size / SIZE_LIMIT); i++) {
-        if (!uploadedNumbers.has(i)) {
-          startPart = i;
-          break;
-        }
+  if (uploadId && uploadedParts.length > 0) {
+    const uploadedNumbers = new Set(uploadedParts.map((p) => p.partNumber));
+    for (let i = 1; i <= Math.ceil(file.size / SIZE_LIMIT); i++) {
+      if (!uploadedNumbers.has(i)) {
+        startPart = i;
+        break;
       }
-      // If all parts already uploaded, complete immediately
-      if (startPart > Math.ceil(file.size / SIZE_LIMIT)) {
-        const params = new URLSearchParams({ uploadId });
-        await axios.post(`/api/write/items/${key}?${params}`, {
-          parts: uploadedParts,
-        });
-        return;
-      }
-    } catch (e) {
-      // Resume failed — start fresh
-      uploadId = null;
-      uploadedParts = [];
-      startPart = 1;
+    }
+    // If all parts already uploaded, complete immediately
+    if (startPart > Math.ceil(file.size / SIZE_LIMIT)) {
+      const params = new URLSearchParams({ uploadId });
+      await axios.post(`/api/write/items/${key}?${params}`, {
+        parts: uploadedParts,
+      });
+      return;
     }
   }
 
