@@ -16,6 +16,7 @@
           <div class="upload-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
         </div>
         <div class="upload-file-size" v-text="uploadFileSizeText"></div>
+        <div class="upload-speed" v-if="uploadSpeed">{{ uploadSpeed }}</div>
       </div>
     </div>
     <UploadPopup v-model="showUploadPopup" @upload="onUploadClicked" @createFolder="createFolder"></UploadPopup>
@@ -226,6 +227,8 @@ export default {
     uploadCurrent: 0,
     uploadCurrentFileName: "",
     uploadFileSizeText: "",
+    uploadSpeed: "",
+    uploadSpeedSamples: [],
     pendingResumes: {}, // key -> { uploadId, parts } for resume
     backgroundImageUrl: "/assets/bg-light.webp"
   }),
@@ -382,6 +385,8 @@ export default {
       this.uploadCurrent++;
       this.uploadCurrentFileName = file.name;
       this.uploadFileSizeText = this.formatSize(file.size);
+      this.uploadSpeed = "";
+      this.uploadSpeedSamples = [];
       let thumbnailDigest = null;
 
       if (file.type.startsWith("image/") || file.type === "video/mp4") {
@@ -413,6 +418,25 @@ export default {
           var percentCompleted =
             (progressEvent.loaded * 100) / progressEvent.total;
           this.uploadProgress = percentCompleted;
+          // Speed calculation: sample every ~500ms
+          const now = Date.now();
+          const samples = this.uploadSpeedSamples;
+          samples.push({ time: now, bytes: progressEvent.loaded });
+          // Keep last 3 seconds of samples
+          const cutoff = now - 3000;
+          while (samples.length > 0 && samples[0].time < cutoff) samples.shift();
+          if (samples.length >= 2) {
+            const first = samples[0];
+            const last = samples[samples.length - 1];
+            const elapsed = (last.time - first.time) / 1000;
+            if (elapsed > 0.5) {
+              const bytes = last.bytes - first.bytes;
+              const bps = bytes / elapsed;
+              this.uploadSpeed = bps >= 1_000_000
+                ? (bps / 1_000_000).toFixed(1) + " MB/s"
+                : (bps / 1_000).toFixed(0) + " KB/s";
+            }
+          }
         };
         if (thumbnailDigest) headers["fd-thumbnail"] = thumbnailDigest;
         if (file.size >= SIZE_LIMIT) {
@@ -806,6 +830,12 @@ export default {
 .upload-file-size {
   color: #888;
   font-size: 11px;
+  text-align: right;
+}
+.upload-speed {
+  color: #4f8cff;
+  font-size: 12px;
+  font-weight: 500;
   text-align: right;
 }
 </style>
