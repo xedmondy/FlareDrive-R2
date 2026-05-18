@@ -596,8 +596,8 @@ export default {
           window.history.pushState(null, "", url.toString());
         }
         document.title = this.cwd.replace(/.*\/(?!$)|\//g, "") === "/" 
-            ? "FlareDrive-R2 - Elegant Cloudflare R2 File Host"
-            :`${this.cwd.replace(/.*\/(?!$)|\//g, "") || "/" } - Elegant Cloudflare R2 File Host`;
+            ? "HEMA Drive"
+            :`${this.cwd.replace(/.*\/(?!$)|\//g, "") || "/" } - HEMA Drive`;
       },
       immediate: true,
     },
